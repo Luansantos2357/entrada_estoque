@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Comprovante de Venda</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Code+Pro:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            margin: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .receipt-container {
+            width: 320px;
+            background-color: #fff;
+            padding: 1.5rem;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        .receipt-header .logo {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .receipt-body {
+            text-align: left;
+            margin: 1.5rem 0;
+            font-family: 'Source Code Pro', monospace;
+            font-size: 0.9rem;
+        }
+
+        .receipt-body .item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .receipt-body .total {
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed #888;
+        }
+
+        .divider {
+            border: 0;
+            border-top: 1px dashed #888;
+            margin: 1.5rem 0;
+        }
+
+        .receipt-footer {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.8rem 2rem;
+            background-color: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        .btn-secondary {
+            background-color: #6b7280;
+        }
+
+        @media print {
+            body {
+                background-color: #fff;
+                padding: 0;
+            }
+
+            .action-buttons {
+                display: none;
+            }
+
+            .receipt-container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="loader">Carregando comprovante...</div>
+        <div id="receipt-wrapper" class="receipt-container" style="display: none;">
+            <div class="receipt-header">
+                <div class="logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" style="width: 32px; height: 32px;">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" />
+                    </svg>
+                    SUA LOJA
+                </div>
+            </div>
+            <hr class="divider">
+            <div class="receipt-body">
+                <div class="item">
+                    <span>Produto:</span>
+                    <span id="produto-nome">-</span>
+                </div>
+                <div class="item">
+                    <span>Tamanho:</span>
+                    <span id="produto-tamanho">-</span>
+                </div>
+                <div class="item">
+                    <span>Quantidade:</span>
+                    <span id="produto-quantidade">-</span>
+                </div>
+                <div class="total">
+                    <span id="valor-total">R$ 0,00</span>
+                </div>
+            </div>
+            <hr class="divider">
+            <div class="receipt-footer">
+                Data da Venda: <span id="data-venda">-</span><br>
+                Obrigado pela preferência!
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn" onclick="window.print()">Imprimir</button>
+            <a href="registrar-venda.html" class="btn btn-secondary">Nova Venda</a>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // O 'vigia' de segurança não é necessário aqui, pois esta página não deve ser acessada diretamente.
+        // Mas mantemos a conexão para buscar os dados.
+
+        // --- 2. LÓGICA DA PÁGINA ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const vendaId = urlParams.get('id');
+
+        async function carregarComprovante() {
+            const loader = document.getElementById('loader');
+            const wrapper = document.getElementById('receipt-wrapper');
+
+            if (!vendaId) {
+                loader.textContent = 'Erro: ID da venda não encontrado.';
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('vendas')
+                .select(`*, produtos (nome_modelo)`)
+                .eq('id', vendaId)
+                .single();
+
+            if (error || !data) {
+                console.error('Erro ao buscar comprovante:', error);
+                loader.textContent = 'Erro ao carregar dados do comprovante.';
+                return;
+            }
+
+            // Preenche os dados no HTML
+            document.getElementById('produto-nome').textContent = data.produtos.nome_modelo;
+            document.getElementById('produto-tamanho').textContent = data.tamanho;
+            document.getElementById('produto-quantidade').textContent = data.quantidade_vendida;
+            document.getElementById('valor-total').textContent = `R$ ${data.valor_total.toFixed(2).replace('.', ',')}`;
+            document.getElementById('data-venda').textContent = new Date(data.created_at).toLocaleDateString('pt-BR');
+
+            // Mostra o comprovante e esconde o loader
+            loader.style.display = 'none';
+            wrapper.style.display = 'block';
+        }
+
+        carregarComprovante();
+    </script>
+</body>
+
+</html>

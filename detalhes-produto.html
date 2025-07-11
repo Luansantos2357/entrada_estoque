@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Produto | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div>
+            <div class="logo"><img src="logo.png" alt="Logo da Loja"></div>
+            <nav>
+                <a href="dashboard.html"><span class="icon">🏠</span><span class="text">Dashboard</span></a>
+                <a href="estoque.html" class="active"><span class="icon">📦</span><span class="text">Estoque</span></a>
+                <a href="entrada-estoque.html"><span class="icon">➕</span><span class="text">Entrada de
+                        Estoque</span></a>
+                <a href="registrar-venda.html"><span class="icon">💸</span><span class="text">Saída (Venda)</span></a>
+                <a href="cadastrar-produto.html"><span class="icon">🆕</span><span class="text">Cadastrar Novo
+                        Produto</span></a>
+                <a href="#" id="btn-logout"><span class="icon">↪️</span><span class="text">Sair</span></a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Detalhes do Produto</h1>
+            <a href="estoque.html" class="back-link">← Voltar para o estoque</a>
+        </div>
+        <div id="loader" style="text-align: center; padding: 2rem;">Carregando...</div>
+        <div class="details-grid" id="details-container" style="display: none;">
+            <div class="left-column">
+                <div class="card product-image">
+                    <img id="product-image" src="https://via.placeholder.com/400" alt="Imagem do Produto">
+                </div>
+                <div class="card actions" style="margin-top: 2rem;">
+                    <a id="btn-repor" href="#" class="btn btn-primary">➕ Repor Estoque</a>
+                    <a id="btn-editar" href="#" class="btn btn-secondary">✏️ Editar</a>
+                </div>
+            </div>
+            <div class="right-column">
+                <div class="card">
+                    <div class="product-main-info">
+                        <h2 id="product-name">Nome do Produto</h2>
+                        <div id="product-price" class="price">R$ 0,00</div>
+                        <div class="info-tags">
+                            <span id="product-ref" class="tag">Ref: -</span>
+                            <span id="product-marca" class="tag">Marca: -</span>
+                            <span id="product-categoria" class="tag">Categoria: -</span>
+                        </div>
+                    </div>
+                    <div class="info-section">
+                        <h3>Observações</h3>
+                        <p id="product-obs">-</p>
+                    </div>
+                    <div class="info-section stock-details">
+                        <h3>Estoque por Tamanho</h3>
+                        <div class="stock-list">
+                            <ul id="stock-list-ul"></ul>
+                        </div>
+                    </div>
+                    <div class="info-section history-list">
+                        <h3>Histórico de Saídas (Vendas)</h3>
+                        <ul id="history-list-ul"></ul>
+                    </div>
+                    <div id="last-update" class="last-update"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (!session) { window.location.href = 'login.html'; }
+        });
+
+        document.getElementById('btn-logout')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        });
+
+        // --- 2. LÓGICA DA PÁGINA ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const produtoId = urlParams.get('id');
+
+        async function carregarDetalhes() {
+            if (!produtoId) {
+                document.getElementById('loader').textContent = 'Erro: ID do produto não encontrado.';
+                return;
+            }
+
+            const { data, error } = await supabase.from('produtos').select(`*, estoque (*)`).eq('id', produtoId).single();
+
+            if (error || !data) {
+                console.error('Erro ao buscar detalhes:', error);
+                document.getElementById('loader').textContent = 'Erro ao carregar o produto.';
+                return;
+            }
+
+            document.getElementById('product-image').src = data.foto_url || 'https://via.placeholder.com/400';
+            document.getElementById('product-name').textContent = data.nome_modelo;
+            document.getElementById('product-price').textContent = `R$ ${data.valor_venda ? data.valor_venda.toFixed(2).replace('.', ',') : '0,00'}`;
+            document.getElementById('product-ref').textContent = `Ref: ${data.referencia || 'N/A'}`;
+            document.getElementById('product-marca').textContent = `Marca: ${data.marca || 'N/A'}`;
+            document.getElementById('product-categoria').textContent = `Categoria: ${data.categoria || 'N/A'}`;
+            document.getElementById('product-obs').textContent = data.observacoes || 'Nenhuma observação.';
+
+            const stockListUl = document.getElementById('stock-list-ul');
+            stockListUl.innerHTML = '';
+            if (data.estoque && data.estoque.length > 0) {
+                data.estoque.sort((a, b) => a.tamanho - b.tamanho).forEach(item => {
+                    const isLowStock = item.quantidade <= data.estoque_minimo;
+                    stockListUl.innerHTML += `<li>Tamanho: <strong>${item.tamanho}</strong> → <span class="quantity ${isLowStock ? 'low' : ''}">${item.quantidade} pares ${isLowStock ? '(baixo!)' : ''}</span></li>`;
+                });
+            } else {
+                stockListUl.innerHTML = '<li>Nenhum estoque cadastrado.</li>';
+            }
+
+            const ultimaAtualizacao = new Date(data.updated_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('last-update').textContent = `Última atualização: ${ultimaAtualizacao}`;
+
+            document.getElementById('btn-repor').href = `entrada-estoque.html?id=${produtoId}`;
+            document.getElementById('btn-editar').href = `editar-produto.html?id=${produtoId}`;
+
+            await carregarHistoricoVendas(produtoId);
+
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('details-container').style.display = 'grid';
+        }
+
+        async function carregarHistoricoVendas(id) {
+            const historyListUl = document.getElementById('history-list-ul');
+            const { data, error } = await supabase.from('vendas').select('*').eq('produto_id', id).order('created_at', { ascending: false }).limit(5);
+
+            historyListUl.innerHTML = '';
+            if (data && data.length > 0) {
+                data.forEach(venda => {
+                    const dataVenda = new Date(venda.created_at).toLocaleDateString('pt-BR');
+                    historyListUl.innerHTML += `<li><span>Venda de ${venda.quantidade_vendida} par(es) (Tam: ${venda.tamanho})</span> <span>${dataVenda}</span></li>`;
+                });
+            } else {
+                historyListUl.innerHTML = '<li>Nenhuma venda registrada para este item.</li>';
+            }
+        }
+
+        carregarDetalhes();
+    </script>
+</body>
+
+</html>

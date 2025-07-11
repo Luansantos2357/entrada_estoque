@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Venda | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div>
+            <div class="logo"><img src="logo.png" alt="Logo da Loja"></div>
+            <nav>
+                <a href="dashboard.html"><span class="icon">🏠</span><span class="text">Dashboard</span></a>
+                <a href="estoque.html"><span class="icon">📦</span><span class="text">Estoque</span></a>
+                <a href="entrada-estoque.html"><span class="icon">➕</span><span class="text">Entrada de
+                        Estoque</span></a>
+                <a href="registrar-venda.html" class="active"><span class="icon">💸</span><span class="text">Saída
+                        (Venda)</span></a>
+                <a href="cadastrar-produto.html"><span class="icon">🆕</span><span class="text">Cadastrar Novo
+                        Produto</span></a>
+                <a href="#" id="btn-logout"><span class="icon">↪️</span><span class="text">Sair</span></a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="main-content venda-grid">
+        <div>
+            <div class="page-header">
+                <h1>Registrar Venda</h1>
+            </div>
+            <div class="card">
+                <form id="form-venda">
+                    <div class="input-group">
+                        <label for="search-product">1. Busque o Produto Vendido</label>
+                        <input type="text" id="search-product" placeholder="Digite o nome ou SKU..." autocomplete="off">
+                        <div id="search-results"></div>
+                    </div>
+                    <div id="sale-details" style="display: none;">
+                        <hr style="margin:2rem 0; border-color: var(--cor-borda);">
+                        <h2>2. Detalhes da Venda</h2>
+                        <div class="input-group">
+                            <label for="tamanho-vendido">Tamanho (Estoque disponível)</label>
+                            <select id="tamanho-vendido" required></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="quantidade-vendida">Quantidade Vendida</label>
+                            <input type="number" id="quantidade-vendida" value="1" min="1" required>
+                        </div>
+                        <div class="sale-summary">
+                            <span id="total-venda" class="total">Total: R$ 0,00</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Confirmar Venda</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div>
+            <div class="page-header">
+                <h1>Últimas Vendas</h1>
+            </div>
+            <div class="card history-list">
+                <ul id="lista-ultimas-vendas"></ul>
+            </div>
+        </div>
+    </main>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (!session) { window.location.href = 'login.html'; }
+        });
+
+        document.getElementById('btn-logout')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        });
+
+        // --- 2. SISTEMA DE NOTIFICAÇÃO ---
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification notification--${type}`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            setTimeout(() => { notification.remove(); }, 5000);
+        }
+
+        // --- 3. LÓGICA DA PÁGINA ---
+        const searchInput = document.getElementById('search-product');
+        const searchResultsDiv = document.getElementById('search-results');
+        const saleDetailsDiv = document.getElementById('sale-details');
+        const tamanhoSelect = document.getElementById('tamanho-vendido');
+        const quantidadeInput = document.getElementById('quantidade-vendida');
+        const totalVendaSpan = document.getElementById('total-venda');
+        const formVenda = document.getElementById('form-venda');
+        const listaUltimasVendas = document.getElementById('lista-ultimas-vendas');
+
+        let selectedProduct = null;
+        let availableStock = [];
+
+        searchInput.addEventListener('keyup', async () => {
+            const query = searchInput.value;
+            if (query.length < 2) { searchResultsDiv.innerHTML = ''; return; }
+            const { data, error } = await supabase.from('produtos').select('*').or(`nome_modelo.ilike.%${query}%,referencia.ilike.%${query}%`).limit(5);
+            searchResultsDiv.innerHTML = '';
+            if (data) {
+                data.forEach(p => {
+                    const item = document.createElement('div');
+                    item.textContent = `${p.nome_modelo} (Ref: ${p.referencia || 'N/A'})`;
+                    item.addEventListener('click', () => selectProduct(p));
+                    searchResultsDiv.appendChild(item);
+                });
+            }
+        });
+
+        async function selectProduct(produto) {
+            selectedProduct = produto;
+            searchResultsDiv.innerHTML = '';
+            searchInput.value = produto.nome_modelo;
+            searchInput.disabled = true;
+
+            const { data: estoque, error } = await supabase.from('estoque').select('id, tamanho, quantidade').eq('produto_id', produto.id).gt('quantidade', 0).order('tamanho');
+            availableStock = estoque || [];
+
+            tamanhoSelect.innerHTML = '<option value="">Selecione um tamanho</option>';
+            if (availableStock.length > 0) {
+                availableStock.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `Tamanho ${item.tamanho} (Disponível: ${item.quantidade})`;
+                    tamanhoSelect.appendChild(option);
+                });
+            } else {
+                tamanhoSelect.innerHTML = '<option value="">Nenhum tamanho em estoque</option>';
+            }
+            saleDetailsDiv.style.display = 'block';
+            updateSaleSummary();
+        }
+
+        function updateSaleSummary() {
+            const quantidade = parseInt(quantidadeInput.value) || 0;
+            const preco = selectedProduct ? selectedProduct.valor_venda : 0;
+            const total = quantidade * preco;
+            totalVendaSpan.textContent = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+        }
+        quantidadeInput.addEventListener('input', updateSaleSummary);
+        tamanhoSelect.addEventListener('change', updateSaleSummary);
+
+        formVenda.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const estoqueId = tamanhoSelect.value;
+            const quantidadeVendida = parseInt(quantidadeInput.value);
+
+            if (!estoqueId || !quantidadeVendida) { showNotification('Selecione o tamanho e a quantidade.', 'warning'); return; }
+
+            const stockItem = availableStock.find(item => item.id == estoqueId);
+            if (quantidadeVendida > stockItem.quantidade) { showNotification(`Estoque insuficiente. Disponível: ${stockItem.quantidade}`, 'error'); return; }
+
+            const novaQuantidade = stockItem.quantidade - quantidadeVendida;
+
+            const { error: updateError } = await supabase.from('estoque').update({ quantidade: novaQuantidade }).eq('id', estoqueId);
+            if (updateError) { showNotification('Erro ao atualizar o estoque.', 'error'); console.error(updateError); return; }
+
+            const { error: insertError } = await supabase.from('vendas').insert([{
+                produto_id: selectedProduct.id,
+                tamanho: stockItem.tamanho,
+                quantidade_vendida: quantidadeVendida,
+                valor_unitario: selectedProduct.valor_venda,
+                valor_total: quantidadeVendida * selectedProduct.valor_venda
+            }]);
+            if (insertError) { showNotification('Estoque atualizado, mas erro ao registar venda no histórico.', 'error'); console.error(insertError); return; }
+
+            showNotification('Venda registada com sucesso!', 'success');
+            resetForm();
+            loadLastSales();
+        });
+
+        function resetForm() {
+            searchInput.disabled = false;
+            formVenda.reset();
+            saleDetailsDiv.style.display = 'none';
+            totalVendaSpan.textContent = 'Total: R$ 0,00';
+            selectedProduct = null;
+            availableStock = [];
+        }
+
+        async function loadLastSales() {
+            const { data, error } = await supabase.from('vendas').select(`*, produtos (nome_modelo)`).order('created_at', { ascending: false }).limit(5);
+            listaUltimasVendas.innerHTML = '';
+            if (data) {
+                data.forEach(venda => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="history-product">${venda.produtos.nome_modelo}</span><span class="history-details">Tam: ${venda.tamanho} | Qtd: ${venda.quantidade_vendida}</span>`;
+                    listaUltimasVendas.appendChild(li);
+                });
+            }
+        }
+
+        loadLastSales();
+    </script>
+</body>
+
+</html>s

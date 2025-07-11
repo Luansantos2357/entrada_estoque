@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chamada para o arquivo de estilo externo -->
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div>
+            <div class="logo"><img src="logo.png" alt="Logo da Loja"></div>
+            <nav><a href="dashboard.html" class="active"><span class="icon">🏠</span><span
+                        class="text">Dashboard</span></a><a href="estoque.html"><span class="icon">📦</span><span
+                        class="text">Estoque</span></a><a href="entrada-estoque.html"><span class="icon">➕</span><span
+                        class="text">Entrada de Estoque</span></a><a href="registrar-venda.html"><span
+                        class="icon">💸</span><span class="text">Saída (Venda)</span></a><a
+                    href="cadastrar-produto.html"><span class="icon">🆕</span><span class="text">Cadastrar Novo
+                        Produto</span></a><a href="#" id="btn-logout"><span class="icon">↪️</span><span
+                        class="text">Sair</span></a></nav>
+        </div>
+    </aside>
+    <main class="main-content">
+        <header class="main-header">
+            <h1>Dashboard</h1>
+            <div class="quick-actions"><a href="registrar-venda.html" class="btn btn-primary"
+                    style="background-color: var(--cor-sucesso);">💸 Registrar Venda</a><a href="entrada-estoque.html"
+                    class="btn btn-primary">➕ Entrada de Estoque</a></div>
+        </header>
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Faturamento (7 dias)</span><span
+                        class="card-icon">💰</span></div>
+                <div id="faturamento-7d" class="card-value success">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Vendas (7 dias)</span><span
+                        class="card-icon">📈</span></div>
+                <div id="vendas-7d" class="card-value">0</div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Valor do Estoque</span><span
+                        class="card-icon">📦</span></div>
+                <div id="valor-estoque" class="card-value">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Estoque Baixo</span><span class="card-icon">⚠️</span>
+                </div>
+                <div id="estoque-baixo-total" class="card-value warning">0</div>
+            </div>
+
+            <!-- SEÇÃO DO GRÁFICO CORRIGIDA -->
+            <div class="card card-half">
+                <h3 class="card-title" style="margin-bottom: 1rem;">Vendas por Categoria</h3>
+                <div class="chart-container">
+                    <canvas id="grafico-vendas-categoria"></canvas>
+                </div>
+            </div>
+
+            <div class="card card-half">
+                <h3 class="card-title" style="margin-bottom: 1rem;">Top 5 Produtos Mais Vendidos</h3>
+                <div id="top-5-lista"></div>
+            </div>
+            <div class="card card-full">
+                <h3 class="card-title" style="margin-bottom: 1rem;">Produtos com Estoque Baixo</h3>
+                <div id="estoque-baixo-lista"></div>
+            </div>
+        </div>
+    </main>
+    <div id="notification-container"></div>
+
+    <script>
+        // Adicionamos um listener para garantir que o script só rode quando a página estiver pronta.
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. CONEXÃO E SEGURANÇA ---
+            const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // --- LÓGICA DE AUTENTICAÇÃO REESTRUTURADA ---
+            async function checkAuthAndLoad() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    carregarDashboard();
+                } else {
+                    window.location.href = 'login.html';
+                }
+            }
+
+            supabase.auth.onAuthStateChange((_event, session) => {
+                if (_event === 'SIGNED_OUT') {
+                    window.location.href = 'login.html';
+                }
+            });
+
+            document.getElementById('btn-logout')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await supabase.auth.signOut();
+            });
+
+
+            // --- LÓGICA DO DASHBOARD ---
+            async function carregarDashboard() {
+                try {
+                    document.getElementById('faturamento-7d').textContent = '...';
+                    document.getElementById('vendas-7d').textContent = '...';
+                    document.getElementById('valor-estoque').textContent = '...';
+                    document.getElementById('estoque-baixo-total').textContent = '...';
+
+                    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+                    const [vendasResult, produtosResult, top5Result] = await Promise.all([
+                        supabase.from('vendas').select(`*, produtos (categoria)`).gte('created_at', sevenDaysAgo),
+                        supabase.rpc('get_produtos_com_estoque'),
+                        supabase.rpc('get_top_produtos_vendidos')
+                    ]);
+
+                    if (vendasResult.error) throw { message: "Erro ao buscar vendas", details: vendasResult.error };
+                    if (produtosResult.error) throw { message: "Erro ao buscar produtos", details: produtosResult.error };
+                    if (top5Result.error) throw { message: "Erro ao buscar top 5", details: top5Result.error };
+
+                    const vendasRecentes = vendasResult.data || [];
+                    const produtosComEstoque = produtosResult.data || [];
+                    const top5 = top5Result.data || [];
+
+                    const totalVendas = vendasRecentes.reduce((acc, v) => acc + v.quantidade_vendida, 0);
+                    const faturamentoTotal = vendasRecentes.reduce((acc, v) => acc + v.valor_total, 0);
+                    document.getElementById('vendas-7d').textContent = totalVendas;
+                    document.getElementById('faturamento-7d').textContent = `R$ ${faturamentoTotal.toFixed(2).replace('.', ',')}`;
+
+                    const valorTotalEstoque = produtosComEstoque.reduce((acc, p) => acc + ((p.preco_custo || 0) * p.total_em_estoque), 0);
+                    document.getElementById('valor-estoque').textContent = `R$ ${valorTotalEstoque.toFixed(2).replace('.', ',')}`;
+
+                    const produtosEstoqueBaixo = produtosComEstoque.filter(p => p.total_em_estoque > 0 && p.total_em_estoque <= p.estoque_minimo);
+                    document.getElementById('estoque-baixo-total').textContent = produtosEstoqueBaixo.length;
+
+                    const listaEstoqueBaixo = document.getElementById('estoque-baixo-lista');
+                    listaEstoqueBaixo.innerHTML = '';
+                    if (produtosEstoqueBaixo.length > 0) {
+                        produtosEstoqueBaixo.forEach(p => {
+                            listaEstoqueBaixo.innerHTML += `<div class="list-item"><span>${p.nome_modelo}</span><span style="color: var(--cor-aviso)">Restam: ${p.total_em_estoque}</span></div>`;
+                        });
+                    } else {
+                        listaEstoqueBaixo.innerHTML = '<p style="color: var(--cor-texto-secundario);">Nenhum produto com estoque baixo.</p>';
+                    }
+
+                    const listaTop5 = document.getElementById('top-5-lista');
+                    listaTop5.innerHTML = '';
+                    if (top5.length > 0) {
+                        top5.forEach(p => {
+                            listaTop5.innerHTML += `<div class="list-item"><span>${p.nome_modelo}</span><span>${p.total_vendido} vendidos</span></div>`;
+                        });
+                    } else {
+                        listaTop5.innerHTML = '<p style="color: var(--cor-texto-secundario);">Nenhuma venda registrada ainda.</p>';
+                    }
+
+                    const vendasPorCategoria = vendasRecentes.reduce((acc, v) => {
+                        const categoria = v.produtos?.categoria || 'Sem Categoria';
+                        acc[categoria] = (acc[categoria] || 0) + v.valor_total;
+                        return acc;
+                    }, {});
+                    desenharGrafico(Object.keys(vendasPorCategoria), Object.values(vendasPorCategoria));
+
+                } catch (error) {
+                    console.error("Ocorreu um erro geral ao carregar o dashboard:", error);
+                    document.querySelector('.dashboard-grid').innerHTML = `<div class="card card-full" style="padding: 2rem; color: red; background-color: #fff1f1;"><h1>Erro ao Carregar o Dashboard</h1><p>Não foi possível buscar os dados. Verifique o console (F12) para detalhes técnicos.</p><pre style="white-space: pre-wrap; background: #ffebeb; padding: 1rem; border-radius: 8px; margin-top: 1rem; color: #990000;">${JSON.stringify(error, null, 2)}</pre></div>`;
+                }
+            }
+
+            function desenharGrafico(labels, data) {
+                const ctx = document.getElementById('grafico-vendas-categoria').getContext('2d');
+                if (window.myChart) window.myChart.destroy();
+                window.myChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Faturamento',
+                            data: data,
+                            backgroundColor: ['#3b82f6', '#16a34a', '#f59e0b', '#ef4444', '#6b7280', '#14b8a6'],
+                            borderColor: 'var(--cor-cartao)',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: 'var(--cor-texto-secundario)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            checkAuthAndLoad();
+        });
+    </script>
+</body>
+
+</html>

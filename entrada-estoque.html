@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrada de Estoque | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div>
+            <div class="logo"><img src="logo.png" alt="Logo da Loja"></div>
+            <nav>
+                <a href="dashboard.html"><span class="icon">🏠</span><span class="text">Dashboard</span></a>
+                <a href="estoque.html"><span class="icon">📦</span><span class="text">Estoque</span></a>
+                <a href="entrada-estoque.html" class="active"><span class="icon">➕</span><span class="text">Entrada de
+                        Estoque</span></a>
+                <a href="registrar-venda.html"><span class="icon">💸</span><span class="text">Saída (Venda)</span></a>
+                <a href="cadastrar-produto.html"><span class="icon">🆕</span><span class="text">Cadastrar Novo
+                        Produto</span></a>
+                <a href="#" id="btn-logout"><span class="icon">↪️</span><span class="text">Sair</span></a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Entrada de Estoque</h1>
+        </div>
+        <div class="card">
+            <div class="input-group">
+                <label for="search-product">1. Busque o Produto</label>
+                <input type="text" id="search-product" placeholder="Digite o nome ou SKU do produto..."
+                    autocomplete="off">
+                <div id="search-results"></div>
+            </div>
+
+            <div id="product-details" style="display: none;">
+                <hr style="margin:2rem 0; border-color: var(--cor-borda);">
+                <h2>2. Detalhes do Produto</h2>
+                <div id="product-summary" class="product-summary"></div>
+                <h3>Estoque Atual</h3>
+                <ul id="current-stock"></ul>
+                <hr style="margin:2rem 0; border-color: var(--cor-borda);">
+                <h3>3. Adicionar Nova Grade</h3>
+                <div class="grade-input">
+                    <div class="input-group"><label for="grade-tamanho">Tamanho</label><input type="number"
+                            id="grade-tamanho"></div>
+                    <div class="input-group"><label for="grade-quantidade">Quantidade a Adicionar</label><input
+                            type="number" id="grade-quantidade"></div>
+                </div>
+                <button type="button" id="btn-confirmar-entrada" class="btn btn-primary">Confirmar Entrada</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (!session) { window.location.href = 'login.html'; }
+        });
+
+        document.getElementById('btn-logout')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        });
+
+        // --- 2. SISTEMA DE NOTIFICAÇÃO ---
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification notification--${type}`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            setTimeout(() => { notification.remove(); }, 5000);
+        }
+
+        // --- 3. LÓGICA DA PÁGINA ---
+        const searchInput = document.getElementById('search-product');
+        const searchResultsDiv = document.getElementById('search-results');
+        const productDetailsDiv = document.getElementById('product-details');
+        const productSummaryDiv = document.getElementById('product-summary');
+        const currentStockUl = document.getElementById('current-stock');
+        const btnConfirmar = document.getElementById('btn-confirmar-entrada');
+
+        let selectedProductId = null;
+        let currentStockData = [];
+
+        searchInput.addEventListener('keyup', async () => {
+            const query = searchInput.value;
+            if (query.length < 2) { searchResultsDiv.innerHTML = ''; return; }
+            const { data, error } = await supabase.from('produtos').select('id, nome_modelo, referencia').or(`nome_modelo.ilike.%${query}%,referencia.ilike.%${query}%`).limit(5);
+            searchResultsDiv.innerHTML = '';
+            if (data) {
+                data.forEach(p => {
+                    const item = document.createElement('div');
+                    item.textContent = `${p.nome_modelo} (Ref: ${p.referencia || 'N/A'})`;
+                    item.addEventListener('click', () => selectProduct(p.id));
+                    searchResultsDiv.appendChild(item);
+                });
+            }
+        });
+
+        async function selectProduct(id) {
+            selectedProductId = id;
+            searchResultsDiv.innerHTML = '';
+            searchInput.disabled = true;
+
+            const { data: produto, error } = await supabase.from('produtos').select('*').eq('id', id).single();
+            const { data: estoque, error: estoqueError } = await supabase.from('estoque').select('*').eq('produto_id', id).order('tamanho');
+
+            currentStockData = estoque || [];
+
+            if (produto) {
+                searchInput.value = produto.nome_modelo;
+                productSummaryDiv.innerHTML = `<img src="${produto.foto_url || 'https://via.placeholder.com/60'}"> <div><h4>${produto.nome_modelo}</h4><p>Cor: ${produto.cor || 'N/A'} | Categoria: ${produto.categoria || 'N/A'}</p></div>`;
+                currentStockUl.innerHTML = '';
+                if (currentStockData.length > 0) {
+                    currentStockData.forEach(item => { currentStockUl.innerHTML += `<li>Tamanho: <strong>${item.tamanho}</strong> - Quantidade: <strong>${item.quantidade}</strong></li>`; });
+                } else {
+                    currentStockUl.innerHTML = '<li>Nenhum estoque cadastrado para este modelo.</li>';
+                }
+                productDetailsDiv.style.display = 'block';
+            }
+        }
+
+        btnConfirmar.addEventListener('click', async () => {
+            const tamanho = document.getElementById('grade-tamanho').value;
+            const quantidadeAdicional = parseInt(document.getElementById('grade-quantidade').value);
+
+            if (!tamanho || !quantidadeAdicional || !selectedProductId) {
+                showNotification('Preencha o tamanho, a quantidade e selecione um produto.', 'warning');
+                return;
+            }
+
+            const estoqueExistente = currentStockData.find(item => item.tamanho == tamanho);
+            let newTotal = quantidadeAdicional + (estoqueExistente ? estoqueExistente.quantidade : 0);
+
+            const { error: upsertError } = await supabase
+                .from('estoque')
+                .upsert({
+                    id: estoqueExistente ? estoqueExistente.id : undefined,
+                    produto_id: selectedProductId,
+                    tamanho: tamanho,
+                    quantidade: newTotal
+                }, { onConflict: 'produto_id, tamanho' });
+
+            if (upsertError) {
+                showNotification('Erro ao dar entrada no estoque.', 'error');
+                console.error(upsertError);
+            } else {
+                showNotification('Entrada de estoque registada com sucesso!', 'success');
+                document.getElementById('grade-tamanho').value = '';
+                document.getElementById('grade-quantidade').value = '';
+                selectProduct(selectedProductId);
+            }
+        });
+    </script>
+</body>
+
+</html>

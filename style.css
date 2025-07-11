@@ -1,0 +1,894 @@
+/* =============================================== */
+/* ===         ARQUIVO DE ESTILO GERAL         === */
+/* =============================================== */
+
+/* 1. Variáveis Globais (Paleta de Cores, etc.) */
+:root {
+    --cor-fundo: #f3f4f6;
+    --cor-cartao: #ffffff;
+    --cor-texto-principal: #111827;
+    --cor-texto-secundario: #6b7280;
+    --cor-borda: #e5e7eb;
+    --cor-primaria: #2563eb;
+    --cor-sucesso: #16a34a;
+    --cor-aviso: #f59e0b;
+    --sombra: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+body.dark-mode {
+    --cor-fundo: #111827;
+    --cor-cartao: #1f2937;
+    --cor-texto-principal: #f9fafb;
+    --cor-texto-secundario: #9ca3af;
+    --cor-borda: #374151;
+    --cor-primaria: #3b82f6;
+    --cor-sucesso: #22c55e;
+    --cor-aviso: #facc15;
+}
+
+/* 2. Reset e Padrões Gerais */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
+    display: flex;
+    margin: 0;
+    transition: background-color .3s, color .3s;
+}
+
+/* 3. Estilos dos Componentes */
+
+/* =================================================== */
+/* ===   CORREÇÃO PARA GRÁFICOS (Chart.js)         === */
+/* =================================================== */
+
+/* Define um container com altura controlada para os gráficos */
+.chart-container {
+    position: relative;
+    height: 350px;
+    /* Altura padrão para desktop */
+    width: 100%;
+}
+
+/* --- Sidebar (Menu Lateral) --- */
+.sidebar {
+    width: 260px;
+    background-color: #111827;
+    color: #e5e7eb;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed;
+}
+
+.sidebar .logo img {
+    max-height: 50px;
+    width: auto;
+}
+
+.sidebar nav a {
+    display: flex;
+    align-items: center;
+    color: #e5e7eb;
+    text-decoration: none;
+    padding: 1rem;
+    border-radius: .5rem;
+    margin-bottom: .8rem;
+    transition: background-color .3s;
+    font-weight: 500;
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+    background-color: #3b82f6;
+    color: #fff;
+}
+
+.sidebar nav a .icon {
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+/* --- Conteúdo Principal --- */
+.main-content {
+    flex-grow: 1;
+    padding: 2.5rem;
+    margin-left: 260px;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.main-header h1 {
+    font-size: 2rem;
+}
+
+/* --- Botões e Ações Rápidas --- */
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity .2s;
+}
+
+.btn:hover {
+    opacity: .85;
+}
+
+.btn-primary {
+    background-color: var(--cor-primaria);
+    color: #fff;
+}
+
+/* --- Grid e Cards do Dashboard --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.card {
+    background-color: var(--cor-cartao);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: var(--sombra);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.card-title {
+    font-weight: 600;
+    color: var(--cor-texto-secundario);
+}
+
+.card-icon {
+    color: var(--cor-texto-secundario);
+}
+
+.card-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.card-value.success {
+    color: var(--cor-sucesso);
+}
+
+.card-value.warning {
+    color: var(--cor-aviso);
+}
+
+.card-full {
+    grid-column: span 4;
+}
+
+.card-half {
+    grid-column: span 2;
+}
+
+/* --- Itens de Lista (Top 5, Estoque Baixo) --- */
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: .75rem 0;
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+/* =================================================== */
+/* === NOVOS ESTILOS (DA PÁGINA DE ESTOQUE) === */
+/* =================================================== */
+
+/* --- Estilos da Página de Estoque (Desktop e Mobile) --- */
+:root {
+    --cor-fundo: #f3f4f6;
+    --cor-cartao: #ffffff;
+    --cor-texto-principal: #111827;
+    --cor-texto-secundario: #6b7280;
+    --cor-borda: #e5e7eb;
+    --cor-primaria: #2563eb;
+    --sombra: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --cor-aviso: #f59e0b;
+}
+
+body.dark-mode {
+    --cor-fundo: #111827;
+    --cor-cartao: #1f2937;
+    --cor-texto-principal: #f9fafb;
+    --cor-texto-secundario: #9ca3af;
+    --cor-borda: #374151;
+    --cor-primaria: #3b82f6;
+}
+
+/* Estilos gerais que já estavam no seu código */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background-color: var(--cor-cartao);
+    border-radius: 1rem;
+    box-shadow: var(--sombra);
+}
+
+.search-bar {
+    flex-grow: 1;
+    min-width: 250px;
+}
+
+.search-bar input,
+.filter-select {
+    width: 100%;
+    padding: .8rem 1rem;
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal)
+}
+
+.table-container {
+    background-color: var(--cor-cartao);
+    border-radius: 1rem;
+    box-shadow: var(--sombra);
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+th,
+td {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+th {
+    font-weight: 600;
+    font-size: .75rem;
+    text-transform: uppercase;
+    color: var(--cor-texto-secundario);
+    letter-spacing: 0.05em;
+}
+
+td .product-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem
+}
+
+td .product-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover
+}
+
+.product-name {
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    background-color: transparent;
+    border: 1px solid var(--cor-borda);
+    color: var(--cor-texto-secundario);
+    padding: 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-action:hover {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
+}
+
+.btn-action svg {
+    width: 16px;
+    height: 16px;
+}
+
+.expandable-row {
+    cursor: pointer;
+}
+
+.expandable-row:hover {
+    background-color: var(--cor-fundo);
+}
+
+.grade-details-row {
+    display: none;
+}
+
+.grade-details-cell {
+    padding: 0 !important;
+}
+
+.grade-content {
+    background-color: var(--cor-fundo);
+    padding: 1rem 1.5rem;
+}
+
+.grade-content ul {
+    list-style: none;
+    padding-left: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.grade-content li {
+    background-color: var(--cor-cartao);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--cor-borda);
+}
+
+.low-stock-indicator {
+    color: var(--cor-aviso);
+    font-weight: bold;
+}
+
+tfoot td {
+    font-weight: 600;
+    background-color: var(--cor-fundo);
+}
+
+
+/* =================================================== */
+/* ===   FUNÇÃO DE REDIMENSIONAMENTO PARA CELULAR   ==== */
+/* =================================================== */
+@media (max-width: 768px) {
+
+    /* Esconde o cabeçalho da tabela (Produto, Categoria, etc.) */
+    table thead {
+        display: none;
+    }
+
+    /* Transforma a tabela, corpo, linhas e células em blocos empilháveis */
+    table,
+    tbody,
+    tr,
+    td {
+        display: block;
+        width: 100%;
+    }
+
+    /* Transforma cada linha (tr) em um "card" com borda e espaçamento */
+    tbody tr {
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--cor-borda);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* Ajusta cada célula (td) para ter o rótulo à esquerda e o valor à direita */
+    tbody td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+        border-bottom: 1px solid var(--cor-borda);
+    }
+
+    tbody td:last-child {
+        border-bottom: 0;
+    }
+
+    /* Cria o rótulo (ex: "Produto:") usando o atributo 'data-label' do HTML */
+    tbody td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 1rem;
+        width: 45%;
+        padding-right: 1rem;
+        text-align: left;
+        font-weight: bold;
+        color: var(--cor-texto-principal);
+    }
+
+    /* Esconde o rodapé da tabela (não faz sentido no layout de cards) */
+    table tfoot {
+        display: none;
+    }
+}
+
+/* =================================================== */
+/* ===   NOVOS ESTILOS (DA PÁGINA DE REGISTRAR VENDA)   === */
+/* =================================================== */
+
+/* --- Layout de Venda e Histórico --- */
+/* Esta regra de grid é mais específica para a página de vendas,
+   por isso a adicionamos aqui. */
+.main-content.venda-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.sale-summary {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--cor-borda);
+    text-align: right;
+}
+
+.sale-summary .total {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--cor-primaria);
+}
+
+.history-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.history-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--cor-borda);
+    font-size: 0.9rem;
+}
+
+.history-list li:last-child {
+    border-bottom: none;
+}
+
+.history-product {
+    font-weight: 500;
+}
+
+.history-details {
+    color: var(--cor-texto-secundario);
+}
+
+/* =================================================== */
+/* === NOVOS ESTILOS (DA PÁGINA DE DETALHES PRODUTO) === */
+/* =================================================== */
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.back-link {
+    color: var(--cor-primaria);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+}
+
+.product-image img {
+    width: 100%;
+    border-radius: 0.75rem;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border: 1px solid var(--cor-borda);
+}
+
+.product-main-info h2 {
+    font-size: 2.25rem;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.product-main-info .price {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--cor-primaria);
+    margin: 0.5rem 0 1.5rem;
+}
+
+.info-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.tag {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-secundario);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.info-section {
+    margin-bottom: 1.5rem;
+}
+
+.info-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--cor-borda);
+    padding-bottom: 0.5rem;
+}
+
+.stock-list ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stock-list li {
+    background-color: var(--cor-fundo);
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+}
+
+.stock-list .quantity.low {
+    color: var(--cor-aviso);
+    font-weight: bold;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn-secondary {
+    background-color: var(--cor-borda);
+    color: var(--cor-texto-principal);
+}
+
+.last-update {
+    font-size: 0.8rem;
+    color: var(--cor-texto-secundario);
+    margin-top: 2rem;
+    text-align: right;
+}
+
+/* Ajuste para o histórico nesta página específica */
+.history-list li {
+    border-bottom: 1px dashed var(--cor-borda);
+}
+
+/* =================================================== */
+/* === NOVOS ESTILOS (DA PÁGINA DE CADASTRO PRODUTO) === */
+/* =================================================== */
+
+/* O seu CSS continua o mesmo, com a adição dos estilos de notificação */
+:root {
+    --cor-primaria: #0d6efd;
+    --cor-fundo: #f4f7fa;
+    --cor-sidebar: #111827;
+    --cor-texto-sidebar: #e5e7eb;
+    --cor-texto-principal: #333;
+    --cor-cartao: #ffffff;
+    --sombra-cartao: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --borda-radius: 12px
+}
+
+body.dark-mode {
+    --cor-fundo: #111827;
+    --cor-cartao: #1f2937;
+    --cor-texto-principal: #f9fafb;
+    --cor-texto-secundario: #9ca3af;
+    --cor-borda: #4b5563;
+    --cor-primaria: #3b82f6;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif
+}
+
+body {
+    background-color: var(--cor-fundo);
+    display: flex;
+    color: var(--cor-texto-principal);
+}
+
+a {
+    text-decoration: none
+}
+
+.sidebar {
+    width: 260px;
+    background-color: var(--cor-sidebar);
+    color: var(--cor-texto-sidebar);
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed
+}
+
+.sidebar .logo img {
+    max-height: 50px;
+    width: auto
+}
+
+.sidebar nav a {
+    display: flex;
+    align-items: center;
+    color: var(--cor-texto-sidebar);
+    text-decoration: none;
+    padding: 1rem;
+    border-radius: var(--borda-radius);
+    margin-bottom: .8rem;
+    transition: background-color .3s;
+    font-weight: 500
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+    background-color: var(--cor-primaria);
+    color: #fff
+}
+
+.sidebar nav a .icon {
+    margin-right: 1rem;
+    font-size: 1.2rem
+}
+
+.main-content {
+    flex-grow: 1;
+    padding: 2.5rem;
+    margin-left: 260px
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    color: var(--cor-texto-principal);
+    margin-bottom: 2rem
+}
+
+.form-container {
+    background-color: var(--cor-cartao);
+    padding: 2.5rem;
+    border-radius: var(--borda-radius);
+    box-shadow: var(--sombra-cartao)
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column
+}
+
+.input-group.full-width {
+    grid-column: 1 / -1
+}
+
+.input-group label {
+    font-weight: 500;
+    margin-bottom: .5rem;
+    color: var(--cor-texto-principal)
+}
+
+.input-group input,
+.input-group select,
+.input-group textarea {
+    width: 100%;
+    padding: .8rem 1rem;
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--cor-borda);
+    margin: 2rem 0
+}
+
+.grade-section h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem
+}
+
+.grade-input {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem
+}
+
+.grade-lista ul {
+    list-style: none;
+    padding: 0
+}
+
+.grade-lista li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--cor-fundo);
+    padding: .8rem;
+    border-radius: 8px;
+    margin-bottom: .5rem
+}
+
+.btn {
+    padding: .8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer
+}
+
+.btn-primary {
+    background-color: var(--cor-primaria);
+    color: #fff
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #fff
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+    padding: .4rem .8rem;
+    font-size: .8rem
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem
+}
+
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px
+}
+
+.notification {
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+    opacity: 0;
+    transform: translateX(100%);
+    animation: slideIn .5s forwards, fadeOut .5s 4.5s forwards
+}
+
+.notification--success {
+    background-color: #28a745
+}
+
+.notification--error {
+    background-color: #dc3545
+}
+
+.notification--warning {
+    background-color: #ffc107;
+    color: #333
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateX(0)
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%)
+    }
+}
+
+/* 4. Estilos de Responsividade */
+@media (max-width: 1200px) {
+    .card-half {
+        grid-column: span 4;
+    }
+}
+
+/* Dentro de @media (max-width: 768px) */
+.form-grid {
+    grid-template-columns: 1fr;
+    /* Colunas do form viram uma só */
+}
+
+.grade-input {
+    flex-direction: column;
+    /* Empilha os inputs de tamanho/quantidade */
+    align-items: stretch;
+}
+
+/* Dentro de @media (max-width: 1200px) */
+.details-grid {
+    grid-template-columns: 1fr;
+}
+
+/* Dentro de @media (max-width: 1200px) */
+.main-content.venda-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-full,
+    .card-half {
+        grid-column: span 1;
+    }
+
+    .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}

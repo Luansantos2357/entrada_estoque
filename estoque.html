@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Estoque | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chamada para o arquivo de estilo externo -->
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div>
+            <div class="logo"><img src="logo.png" alt="Logo da Loja"></div>
+            <nav>
+                <a href="dashboard.html"><span class="icon">🏠</span><span class="text">Dashboard</span></a>
+                <a href="estoque.html" class="active"><span class="icon">📦</span><span class="text">Estoque</span></a>
+                <a href="entrada-estoque.html"><span class="icon">➕</span><span class="text">Entrada de
+                        Estoque</span></a>
+                <a href="registrar-venda.html"><span class="icon">💸</span><span class="text">Saída (Venda)</span></a>
+                <a href="cadastrar-produto.html"><span class="icon">🆕</span><span class="text">Cadastrar Novo
+                        Produto</span></a>
+                <a href="#" id="btn-logout"><span class="icon">↪️</span><span class="text">Sair</span></a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Consulta de Estoque</h1>
+        </div>
+        <div class="toolbar">
+            <div class="search-bar"><input type="text" id="search-input"
+                    placeholder="🔎 Pesquisar por modelo ou referência..."></div>
+            <select id="filter-categoria" class="filter-select">
+                <option value="">Todas as Categorias</option>
+            </select>
+            <select id="filter-marca" class="filter-select">
+                <option value="">Todas as Marcas</option>
+            </select>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Categoria</th>
+                        <th>Qtd. Total</th>
+                        <th>Última Atualização</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-estoque-corpo"></tbody>
+                <tfoot>
+                    <tr>
+                        <td id="total-modelos">Modelos: 0</td>
+                        <td></td>
+                        <td id="total-pares">Pares: 0</td>
+                        <td id="total-valor" colspan="2">Valor do Estoque: R$ 0,00</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </main>
+    <div id="notification-container"></div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                carregarDadosCompletos();
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        document.getElementById('btn-logout')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            supabase.auth.signOut();
+        });
+
+        // --- 2. LÓGICA DA PÁGINA ---
+        let todosOsProdutos = [];
+        const tabelaCorpo = document.getElementById('tabela-estoque-corpo');
+        const searchInput = document.getElementById('search-input');
+        const filterCategoria = document.getElementById('filter-categoria');
+        const filterMarca = document.getElementById('filter-marca');
+
+        async function carregarDadosCompletos() {
+            tabelaCorpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">Carregando produtos...</td></tr>`;
+            const { data, error } = await supabase.rpc('get_produtos_com_estoque');
+
+            if (error) {
+                console.error('Erro ao buscar produtos:', error);
+                tabelaCorpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: red;"><b>Erro ao carregar dados.</b></td></tr>`;
+                return;
+            }
+
+            todosOsProdutos = data || [];
+            popularFiltros(todosOsProdutos);
+            renderizarTabela(todosOsProdutos);
+        }
+
+        function popularFiltros(produtos) {
+            const categorias = [...new Set(produtos.map(p => p.categoria).filter(Boolean))];
+            const marcas = [...new Set(produtos.map(p => p.marca).filter(Boolean))];
+
+            filterCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
+            categorias.sort().forEach(c => filterCategoria.innerHTML += `<option value="${c}">${c}</option>`);
+
+            filterMarca.innerHTML = '<option value="">Todas as Marcas</option>';
+            marcas.sort().forEach(m => filterMarca.innerHTML += `<option value="${m}">${m}</option>`);
+        }
+
+        function renderizarTabela(produtos) {
+            tabelaCorpo.innerHTML = '';
+            if (produtos.length === 0) {
+                tabelaCorpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">Nenhum produto encontrado.</td></tr>`;
+                atualizarSumario([]);
+                return;
+            }
+
+            produtos.forEach(produto => {
+                const linha = document.createElement('tr');
+                linha.className = 'expandable-row';
+                const isLow = produto.total_em_estoque > 0 && produto.total_em_estoque <= produto.estoque_minimo;
+                const dataAtualizacao = produto.updated_at ? new Date(produto.updated_at).toLocaleDateString('pt-BR') : 'N/A';
+
+                // *** Atributos data-label atribuídos aqui para o CSS responsivo funcionar ***
+                linha.innerHTML = `
+                    <td data-label="Produto">
+                        <div class="product-info">
+                            <img src="${produto.foto_url || 'https://placehold.co/40x40/e2e8f0/adb5bd?text=Sem+Foto'}" alt="Produto" onerror="this.onerror=null;this.src='https://placehold.co/40x40/e2e8f0/adb5bd?text=Erro';">
+                            <div>
+                                <div class="product-name">${produto.nome_modelo}</div>
+                                <div style="font-size: 0.8rem; color: var(--cor-texto-secundario)">Ref: ${produto.referencia || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td data-label="Categoria">${produto.categoria || 'N/A'}</td>
+                    <td data-label="Qtd. Total"><strong class="${isLow ? 'low-stock-indicator' : ''}">${produto.total_em_estoque} ${isLow ? ' (Baixo!)' : ''}</strong></td>
+                    <td data-label="Última Atualização">${dataAtualizacao}</td>
+                    <td data-label="Ações">
+                        <div class="action-buttons">
+                            <a href="entrada-estoque.html?id=${produto.id}" title="Repor Estoque" class="btn-action">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            </a>
+                            <a href="editar-produto.html?id=${produto.id}" title="Editar Produto" class="btn-action">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                            </a>
+                        </div>
+                    </td>
+                `;
+
+                const linhaGrade = document.createElement('tr');
+                linhaGrade.className = 'grade-details-row';
+                const gradeCell = document.createElement('td');
+                gradeCell.colSpan = 5;
+
+                let gradeHtml = '<div class="grade-content"><strong>Grade de Estoque:</strong><ul>';
+                if (produto.grade && produto.grade.length > 0 && produto.grade[0].tamanho !== null) {
+                    produto.grade.forEach(item => {
+                        gradeHtml += `<li>Tamanho: <strong>${item.tamanho}</strong> → ${item.quantidade} pares</li>`;
+                    });
+                } else {
+                    gradeHtml += '<li>Nenhum estoque detalhado cadastrado.</li>';
+                }
+                gradeHtml += '</ul></div>';
+                gradeCell.innerHTML = gradeHtml;
+                linhaGrade.appendChild(gradeCell);
+
+                tabelaCorpo.appendChild(linha);
+                tabelaCorpo.appendChild(linhaGrade);
+
+                linha.addEventListener('click', (e) => {
+                    if (e.target.closest('.action-buttons')) return;
+                    linhaGrade.style.display = linhaGrade.style.display === 'table-row' ? 'none' : 'table-row';
+                });
+            });
+            atualizarSumario(produtos);
+        }
+
+        function atualizarSumario(produtos) {
+            const totalModelos = produtos.length;
+            const totalPares = produtos.reduce((acc, p) => acc + p.total_em_estoque, 0);
+            const valorTotal = produtos.reduce((acc, p) => acc + ((p.preco_custo || 0) * p.total_em_estoque), 0);
+
+            document.getElementById('total-modelos').textContent = `Modelos: ${totalModelos}`;
+            document.getElementById('total-pares').textContent = `Pares: ${totalPares}`;
+            document.getElementById('total-valor').textContent = `Valor do Estoque: R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+        }
+
+        function aplicarFiltros() {
+            const termoBusca = searchInput.value.toLowerCase();
+            const categoriaSelecionada = filterCategoria.value;
+            const marcaSelecionada = filterMarca.value;
+
+            const produtosFiltrados = todosOsProdutos.filter(p => {
+                const buscaOk = (p.nome_modelo?.toLowerCase() || '').includes(termoBusca) || (p.referencia?.toLowerCase() || '').includes(termoBusca);
+                const categoriaOk = !categoriaSelecionada || p.categoria === categoriaSelecionada;
+                const marcaOk = !marcaSelecionada || p.marca === marcaSelecionada;
+                return buscaOk && categoriaOk && marcaOk;
+            });
+            renderizarTabela(produtosFiltrados);
+        }
+
+        searchInput.addEventListener('input', aplicarFiltros);
+        filterCategoria.addEventListener('change', aplicarFiltros);
+        filterMarca.addEventListener('change', aplicarFiltros);
+
+    </script>
+</body>
+
+</html>

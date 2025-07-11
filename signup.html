@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* O CSS é exatamente o mesmo da tela de login para consistência visual */
+        :root {
+            --cor-fundo: #f3f4f6;
+            --cor-cartao: #ffffff;
+            --cor-texto-principal: #111827;
+            --cor-texto-secundario: #6b7280;
+            --cor-borda: #d1d5db;
+            --cor-borda-foco: #3b82f6;
+            --cor-primaria: #2563eb;
+            --cor-primaria-hover: #1d4ed8;
+            --sombra: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        body.dark-mode {
+            --cor-fundo: #111827;
+            --cor-cartao: #1f2937;
+            --cor-texto-principal: #f9fafb;
+            --cor-texto-secundario: #9ca3af;
+            --cor-borda: #4b5563;
+            --cor-borda-foco: #60a5fa;
+            --cor-primaria: #3b82f6;
+            --cor-primaria-hover: #2563eb;
+            --sombra: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto-principal);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .login-container {
+            background-color: var(--cor-cartao);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--sombra);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .title {
+            color: var(--cor-texto-secundario);
+            margin-bottom: 2rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--cor-borda);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto-principal);
+            margin-bottom: 1.5rem;
+            box-sizing: border-box;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--cor-borda-foco);
+            box-shadow: 0 0 0 3px var(--cor-primaria-hover-alfa, rgba(59, 130, 246, 0.2));
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.9rem;
+            border: none;
+            border-radius: 0.5rem;
+            background-color: var(--cor-primaria);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--cor-primaria-hover);
+        }
+
+        .links {
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .links a {
+            color: var(--cor-primaria);
+            text-decoration: none;
+            display: block;
+            margin-top: 0.5rem;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--cor-texto-secundario);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .notification {
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: .95rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideIn .5s forwards, fadeOut .5s 4.5s forwards
+        }
+
+        .notification--success {
+            background-color: #28a745
+        }
+
+        .notification--error {
+            background-color: #dc3545
+        }
+
+        .notification--warning {
+            background-color: #ffc107;
+            color: #333
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(100%)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <button id="theme-toggle" class="theme-toggle">🌙</button>
+
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" />
+            </svg>
+            SUA LOJA
+        </div>
+        <p class="title">Crie sua conta de acesso</p>
+
+        <form id="form-signup">
+            <input type="email" id="email" class="input-field" placeholder="E-mail" required>
+            <input type="password" id="password" class="input-field" placeholder="Senha (mínimo 6 caracteres)" required>
+            <button type="submit" class="btn">Criar Conta</button>
+        </form>
+
+        <div class="links">
+            <a href="login.html">Já tem uma conta? Faça login</a>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Verifica se o usuário já está logado. Se estiver, redireciona para o dashboard.
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        // --- 2. SISTEMA DE NOTIFICAÇÃO ---
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification notification--${type}`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            setTimeout(() => { notification.remove(); }, 5000);
+        }
+
+        // --- 3. LÓGICA DE CADASTRO (SIGN UP) ---
+        const formSignup = document.getElementById('form-signup');
+        formSignup.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const { data, error } = await supabase.auth.signUp({ email, password });
+
+            if (error) {
+                showNotification('Erro ao criar conta: ' + error.message, 'error');
+            } else {
+                showNotification('Conta criada! Verifique seu e-mail para confirmar antes de fazer o login.', 'success');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
+            }
+        });
+
+        // --- 4. LÓGICA DO TEMA ---
+        const themeToggleBtn = document.getElementById("theme-toggle");
+        if (localStorage.getItem("theme") === "dark") { document.body.classList.add("dark-mode"); themeToggleBtn.textContent = "☀️" }
+        themeToggleBtn.addEventListener("click", () => { document.body.classList.toggle("dark-mode"); if (document.body.classList.contains("dark-mode")) { localStorage.setItem("theme", "dark"); themeToggleBtn.textContent = "☀️" } else { localStorage.setItem("theme", "light"); themeToggleBtn.textContent = "🌙" } });
+    </script>
+</body>
+
+</html>

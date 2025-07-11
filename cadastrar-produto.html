@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Novo Produto | Sua Loja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div>
+            <div class="logo"><img src="logo.png" alt="Logo da Loja"></div>
+            <nav>
+                <a href="dashboard.html"><span class="icon">🏠</span><span class="text">Dashboard</span></a>
+                <a href="estoque.html"><span class="icon">📦</span><span class="text">Estoque</span></a>
+                <a href="entrada-estoque.html"><span class="icon">➕</span><span class="text">Entrada de
+                        Estoque</span></a>
+                <a href="registrar-venda.html"><span class="icon">💸</span><span class="text">Saída (Venda)</span></a>
+                <a href="cadastrar-produto.html" class="active"><span class="icon">🆕</span><span class="text">Cadastrar
+                        Novo Produto</span></a>
+                <a href="#" id="btn-logout"><span class="icon">↪️</span><span class="text">Sair</span></a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Cadastrar Novo Produto</h1>
+        </div>
+        <form id="form-cadastro-completo" class="form-container">
+            <div class="form-grid">
+                <div class="input-group full-width"><label for="nome_modelo">Nome do Modelo</label><input type="text"
+                        name="nome_modelo" required></div>
+                <div class="input-group"><label for="referencia">Referência / SKU</label><input type="text"
+                        name="referencia"></div>
+                <div class="input-group"><label for="marca">Marca</label><input type="text" name="marca"></div>
+                <div class="input-group"><label for="cor">Cor</label><input type="text" name="cor"></div>
+                <div class="input-group"><label for="categoria">Categoria</label><select name="categoria">
+                        <option value="">Selecione...</option>
+                        <option>Tênis</option>
+                        <option>Sapatênis</option>
+                        <option>Sapato Social</option>
+                        <option>Sandália</option>
+                        <option>Bota</option>
+                        <option>Outro</option>
+                    </select></div>
+                <div class="input-group"><label for="valor_venda">Valor de Venda (R$)</label><input type="number"
+                        step="0.01" name="valor_venda" required></div>
+                <div class="input-group"><label for="preco_custo">Preço de Custo (R$)</label><input type="number"
+                        step="0.01" name="preco_custo"></div>
+                <div class="input-group full-width"><label for="observacoes">Observações Internas</label><textarea
+                        name="observacoes" rows="2"></textarea></div>
+                <div class="input-group full-width"><label for="foto_url">Imagem do Produto (URL)</label><input
+                        type="text" name="foto_url" placeholder="Cole o link da imagem aqui"></div>
+            </div>
+            <hr>
+            <div class="grade-section">
+                <h3>Grade de Tamanhos e Quantidades</h3>
+                <div class="grade-input">
+                    <div class="input-group"><label for="grade-tamanho">Tamanho</label><input type="number"
+                            id="grade-tamanho"></div>
+                    <div class="input-group"><label for="grade-quantidade">Quantidade</label><input type="number"
+                            id="grade-quantidade"></div>
+                    <button type="button" id="btn-adicionar-grade" class="btn btn-secondary">Adicionar</button>
+                </div>
+                <div class="grade-lista">
+                    <ul id="grade-lista-itens"></ul>
+                </div>
+            </div>
+            <hr>
+            <div class="form-actions">
+                <a href="dashboard.html" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Salvar Produto Completo</button>
+            </div>
+        </form>
+    </main>
+
+    <div id="notification-container"></div>
+
+    <script>
+        // --- 1. CONEXÃO E SEGURANÇA ---
+        const SUPABASE_URL = 'https://quubrjkzddxgmrxlhsqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWJyamt6ZGR4Z21yeGxoc3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NTAyNjIsImV4cCI6MjA2NzUyNjI2Mn0.Q-YpUje7wt8sHlGmuEvhnH2txgiD3mI7UuzIr9Wniyw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (!session) { window.location.href = 'login.html'; }
+        });
+
+        document.getElementById('btn-logout')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        });
+
+        // --- 2. SISTEMA DE NOTIFICAÇÃO ---
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification notification--${type}`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            setTimeout(() => { notification.remove(); }, 5000);
+        }
+
+        // --- 3. LÓGICA DA PÁGINA ---
+        const btnAdicionarGrade = document.getElementById('btn-adicionar-grade');
+        const inputTamanho = document.getElementById('grade-tamanho');
+        const inputQuantidade = document.getElementById('grade-quantidade');
+        const listaItensUl = document.getElementById('grade-lista-itens');
+        const formPrincipal = document.getElementById('form-cadastro-completo');
+        let gradeDeEstoque = [];
+
+        function renderizarGrade() {
+            listaItensUl.innerHTML = '';
+            gradeDeEstoque.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>Tamanho: <strong>${item.tamanho}</strong> | Quantidade: <strong>${item.quantidade}</strong></span><button type="button" class="btn btn-danger btn-remover-grade" data-index="${index}">Remover</button>`;
+                listaItensUl.appendChild(li);
+            });
+        }
+
+        btnAdicionarGrade.addEventListener('click', () => {
+            const tamanho = inputTamanho.value;
+            const quantidade = inputQuantidade.value;
+            if (tamanho && quantidade) {
+                gradeDeEstoque.push({ tamanho: parseInt(tamanho), quantidade: parseInt(quantidade) });
+                renderizarGrade();
+                inputTamanho.value = '';
+                inputQuantidade.value = '';
+                inputTamanho.focus();
+            } else {
+                showNotification('Por favor, preencha o tamanho e a quantidade.', 'warning');
+            }
+        });
+
+        listaItensUl.addEventListener('click', (event) => {
+            if (event.target.classList.contains('btn-remover-grade')) {
+                const index = event.target.getAttribute('data-index');
+                gradeDeEstoque.splice(index, 1);
+                renderizarGrade();
+            }
+        });
+
+        formPrincipal.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const botaoSalvar = event.target.querySelector('button[type="submit"]');
+            botaoSalvar.disabled = true;
+            botaoSalvar.textContent = 'Salvando...';
+
+            const formData = new FormData(formPrincipal);
+            const produtoData = Object.fromEntries(formData.entries());
+
+            const { data: novoProduto, error: produtoError } = await supabase.from('produtos').insert(produtoData).select().single();
+
+            if (produtoError) {
+                showNotification('Erro ao cadastrar o produto.', 'error');
+                console.error(produtoError);
+                botaoSalvar.disabled = false;
+                botaoSalvar.textContent = 'Salvar Produto Completo';
+                return;
+            }
+
+            if (gradeDeEstoque.length > 0) {
+                const estoqueData = gradeDeEstoque.map(item => ({ produto_id: novoProduto.id, tamanho: item.tamanho, quantidade: item.quantidade }));
+                const { error: estoqueError } = await supabase.from('estoque').insert(estoqueData);
+
+                if (estoqueError) {
+                    showNotification('Produto salvo, mas erro ao salvar o estoque.', 'error');
+                    console.error(estoqueError);
+                    botaoSalvar.disabled = false;
+                    botaoSalvar.textContent = 'Salvar Produto Completo';
+                    return;
+                }
+            }
+
+            showNotification('Produto e estoque salvos com sucesso!', 'success');
+            setTimeout(() => { window.location.href = 'estoque.html'; }, 2000);
+        });
+    </script>
+</body>
+
+</html>
